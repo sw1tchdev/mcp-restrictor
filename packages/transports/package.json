@@ -1,0 +1,43 @@
+{
+  "name": "@mcp-restrictor/transports",
+  "version": "0.0.1",
+  "description": "MCP transport bridges for MCP Restrictor.",
+  "homepage": "https://github.com/sw1tchdev/mcp-restrictor#readme",
+  "bugs": {
+    "url": "https://github.com/sw1tchdev/mcp-restrictor/issues"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/sw1tchdev/mcp-restrictor.git",
+    "directory": "packages/transports"
+  },
+  "files": [
+    "dist"
+  ],
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json"
+  },
+  "dependencies": {
+    "@mcp-restrictor/core": "workspace:*",
+    "@modelcontextprotocol/client": "2.0.0",
+    "@modelcontextprotocol/node": "2.0.0",
+    "@modelcontextprotocol/server": "2.0.0",
+    "ws": "8.21.1"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}

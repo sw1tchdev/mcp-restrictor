@@ -1,0 +1,35 @@
+{
+  "name": "mcp-restrictor",
+  "version": "0.0.1",
+  "private": true,
+  "homepage": "https://github.com/sw1tchdev/mcp-restrictor#readme",
+  "bugs": {
+    "url": "https://github.com/sw1tchdev/mcp-restrictor/issues"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/sw1tchdev/mcp-restrictor.git"
+  },
+  "scripts": {
+    "build": "pnpm -r build",
+    "lint": "oxlint packages test --deny-warnings",
+    "format": "oxfmt",
+    "format:check": "oxfmt --check",
+    "test": "vitest run",
+    "test:container": "node test/container-smoke.mjs",
+    "typecheck": "tsc -p tsconfig.json"
+  },
+  "devDependencies": {
+    "@types/node": "^26.1.2",
+    "@types/ws": "8.18.1",
+    "oxfmt": "0.63.0",
+    "oxlint": "1.78.0",
+    "typescript": "^7.0.2",
+    "vitest": "^4.1.10"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "packageManager": "pnpm@9.9.0"
+}

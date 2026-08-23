@@ -1,0 +1,6 @@
+{
+  "packages/core": "0.0.1",
+  "packages/policy": "0.0.1",
+  "packages/transports": "0.0.1",
+  "packages/cli": "0.0.1"
+}

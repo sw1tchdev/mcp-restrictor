@@ -1,0 +1,36 @@
+{
+  "name": "@mcp-restrictor/core",
+  "version": "0.0.1",
+  "description": "Core policy-enforcement primitives for MCP Restrictor.",
+  "homepage": "https://github.com/sw1tchdev/mcp-restrictor#readme",
+  "bugs": {
+    "url": "https://github.com/sw1tchdev/mcp-restrictor/issues"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/sw1tchdev/mcp-restrictor.git",
+    "directory": "packages/core"
+  },
+  "files": [
+    "dist"
+  ],
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}

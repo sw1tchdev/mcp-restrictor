@@ -1,0 +1,15 @@
+{
+  "$schema": "https://raw.githubusercontent.com/googleapis/release-please/main/schemas/config.json",
+  "release-type": "node",
+  "include-component-in-tag": true,
+  "plugins": ["node-workspace"],
+  "packages": {
+    "packages/core": { "component": "core", "package-name": "@mcp-restrictor/core" },
+    "packages/policy": { "component": "policy", "package-name": "@mcp-restrictor/policy" },
+    "packages/transports": {
+      "component": "transports",
+      "package-name": "@mcp-restrictor/transports"
+    },
+    "packages/cli": { "component": "cli", "package-name": "@mcp-restrictor/cli" }
+  }
+}
