@@ -1,0 +1,12 @@
+version: 1
+default: deny
+tools:
+  allow:
+    - name: read_file
+    - name: write_file
+      conditions:
+        - argument: path
+          operator: startsWith
+          value: /workspace/
+  deny:
+    - name: delete_file

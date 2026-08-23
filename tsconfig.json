@@ -1,0 +1,22 @@
+{
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "allowImportingTsExtensions": true,
+    "declaration": false,
+    "declarationMap": false,
+    "jsx": "react-jsx",
+    "noEmit": true,
+    "paths": {
+      "@mcp-restrictor/core": ["./packages/core/src/index.ts"],
+      "@mcp-restrictor/policy": ["./packages/policy/src/index.ts"],
+      "@mcp-restrictor/transports": ["./packages/transports/src/index.ts"]
+    },
+    "types": ["node", "vitest/globals"]
+  },
+  "include": [
+    "packages/*/src/**/*.ts",
+    "packages/*/src/**/*.tsx",
+    "packages/*/test/**/*.ts",
+    "packages/*/test/**/*.tsx"
+  ]
+}
