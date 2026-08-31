@@ -21,6 +21,19 @@ jobs:
       - run: pnpm build
       - run: pnpm typecheck
       - run: pnpm test
+      - name: Build container image
+        env:
+          MCP_RESTRICTOR_TEST_IMAGE: mcp-restrictor-ci:${{ github.sha }}
+        run: docker build --platform linux/amd64 --tag "$MCP_RESTRICTOR_TEST_IMAGE" .
+      - name: Smoke container image
+        env:
+          MCP_RESTRICTOR_TEST_IMAGE: mcp-restrictor-ci:${{ github.sha }}
+        run: pnpm run test:container
+      - run: |
+          mkdir -p "$RUNNER_TEMP/npm-packages"
+          for package in packages/core packages/policy packages/transports packages/cli; do
+            (cd "$package" && pnpm pack --pack-destination "$RUNNER_TEMP/npm-packages")
+          done
 
   release:
     needs: verify
