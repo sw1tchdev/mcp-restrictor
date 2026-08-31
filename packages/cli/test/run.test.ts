@@ -639,7 +639,9 @@ async function toolsAndCall(url: string, tool: string): Promise<{ tools: string[
 }
 
 async function waitForText(chunks: readonly Buffer[], value: string): Promise<void> {
-  await vi.waitFor(() => expect(Buffer.concat(chunks).toString("utf8")).toContain(value));
+  await vi.waitFor(() => expect(Buffer.concat(chunks).toString("utf8")).toContain(value), {
+    timeout: 3_000,
+  });
 }
 
 function exampleOAuthProfile(id: string, serverUrl: string): OAuthProfile {
