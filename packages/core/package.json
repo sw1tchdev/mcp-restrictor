@@ -1,6 +1,6 @@
 {
   "name": "@mcp-restrictor/core",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "description": "Core policy-enforcement primitives for MCP Restrictor.",
   "homepage": "https://github.com/sw1tchdev/mcp-restrictor#readme",
   "bugs": {

@@ -1,6 +1,6 @@
 {
   "name": "@mcp-restrictor/transports",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "description": "MCP transport bridges for MCP Restrictor.",
   "homepage": "https://github.com/sw1tchdev/mcp-restrictor#readme",
   "bugs": {
