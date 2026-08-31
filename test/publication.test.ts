@@ -589,6 +589,8 @@ describe("public repository contract", () => {
     );
     const config = JSON.parse(await readFile(resolve(root, "release-please-config.json"), "utf8"));
     const release = await readFile(resolve(root, ".github/workflows/release.yml"), "utf8");
+    const verify = workflowJob(release, "verify");
+    const releaseJob = workflowJob(release, "release");
 
     expect(Object.keys(manifest)).toEqual(Object.keys(config.packages));
     for (const [path, version] of Object.entries(manifest)) {
@@ -611,10 +613,28 @@ describe("public repository contract", () => {
     expect(release).toContain(
       "googleapis/release-please-action@5c625bfb5d1ff62eadeeb3772007f7f66fdcf071",
     );
-    expect(release).toContain("pnpm install --frozen-lockfile");
+    expect(release).toMatch(/^  push:\n    branches: \[main\]$/m);
+    for (const command of [
+      "pnpm install --frozen-lockfile",
+      "pnpm lint",
+      "pnpm format:check",
+      "pnpm build",
+      "pnpm typecheck",
+      "pnpm test",
+    ])
+      expect(verify).toContain(command);
     expect(release).toContain("npm install --global npm@11.18.0");
     expect(release).toContain("npm view");
     expect(release).toContain("npm publish");
+    expect(workflowStep(verify, "Build container image")).toContain(
+      'docker build --platform linux/amd64 --tag "$MCP_RESTRICTOR_TEST_IMAGE" .',
+    );
+    expect(workflowStep(verify, "Smoke container image")).toContain("pnpm run test:container");
+    expect(verify).toContain(
+      "for package in packages/core packages/policy packages/transports packages/cli; do",
+    );
+    expect(verify).toContain('pnpm pack --pack-destination "$RUNNER_TEMP/npm-packages"');
+    expect(releaseJob).toContain("    needs: verify");
     for (const path of [
       "packages/core",
       "packages/policy",
@@ -772,8 +792,9 @@ describe("public repository contract", () => {
     const ci = await readFile(resolve(root, ".github/workflows/ci.yml"), "utf8");
 
     expect(ci).toContain("permissions:\n  contents: read");
-    expect(ci).toContain("pull_request:");
-    expect(ci).toContain("branches: [main]");
+    expect(ci).toMatch(/^  workflow_dispatch:\n/m);
+    expect(ci).toMatch(/^  pull_request:\n    branches: \[main\]$/m);
+    expect(ci).not.toMatch(/^  push:/m);
     for (const command of [
       "pnpm install --frozen-lockfile",
       "pnpm lint",
