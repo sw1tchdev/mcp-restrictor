@@ -321,6 +321,9 @@ describe("public repository contract", () => {
       url: "git+https://github.com/sw1tchdev/mcp-restrictor.git",
     };
     const rootManifest = JSON.parse(await readFile(resolve(root, "package.json"), "utf8"));
+    const releaseVersions = JSON.parse(
+      await readFile(resolve(root, ".release-please-manifest.json"), "utf8"),
+    );
 
     expect(rootManifest.version).toBe("0.0.1");
     expect(rootManifest.private).toBe(true);
@@ -357,7 +360,7 @@ describe("public repository contract", () => {
       );
 
       expect(manifest.name).toBe(`@mcp-restrictor/${directory}`);
-      expect(manifest.version).toBe("0.0.1");
+      expect(manifest.version).toBe(releaseVersions[`packages/${directory}`]);
       expect(manifest.license).toBe("MIT");
       expect(manifest.engines).toEqual({ node: ">=22" });
       expect(manifest.publishConfig).toEqual({ access: "public" });
@@ -587,12 +590,13 @@ describe("public repository contract", () => {
     const config = JSON.parse(await readFile(resolve(root, "release-please-config.json"), "utf8"));
     const release = await readFile(resolve(root, ".github/workflows/release.yml"), "utf8");
 
-    expect(manifest).toEqual({
-      "packages/core": "0.0.1",
-      "packages/policy": "0.0.1",
-      "packages/transports": "0.0.1",
-      "packages/cli": "0.0.1",
-    });
+    expect(Object.keys(manifest)).toEqual(Object.keys(config.packages));
+    for (const [path, version] of Object.entries(manifest)) {
+      const packageManifest = JSON.parse(
+        await readFile(resolve(root, path, "package.json"), "utf8"),
+      );
+      expect(version).toBe(packageManifest.version);
+    }
     expect(config.plugins).toEqual(["node-workspace"]);
     expect(Object.keys(config.packages)).toEqual([
       "packages/core",
