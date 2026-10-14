@@ -1,4 +1,4 @@
-FROM node:24.19.0-bookworm-slim@sha256:3638d9a6fe4030bd716be989438248074489337ba3275657f93595428be4fc03 AS build
+FROM node:26.11.1-bookworm-slim@sha256:86f07bc9c5dce4578cf37e5a418b7bfc7f817cda25cde66e2b66e95ed86c4567 AS build
 
 WORKDIR /build
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
@@ -15,7 +15,7 @@ RUN pnpm --filter @mcp-restrictor/cli deploy --prod --no-optional /opt/mcp-restr
     find /opt/mcp-restrictor -type f -name '*.map' -delete && \
     find /opt/mcp-restrictor -type f -name '*.tsbuildinfo' -delete
 
-FROM node:24.19.0-bookworm-slim@sha256:3638d9a6fe4030bd716be989438248074489337ba3275657f93595428be4fc03
+FROM node:26.11.1-bookworm-slim@sha256:86f07bc9c5dce4578cf37e5a418b7bfc7f817cda25cde66e2b66e95ed86c4567
 
 RUN apt-get update && \
     apt-get install --no-install-recommends -y util-linux && \
