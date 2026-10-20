@@ -61,7 +61,9 @@ test("snapshots caller-owned runtime inputs for both token and refresh", async (
   const fixture = await storedProfile();
   const configured = binding();
   const refresh = vi.fn<NonNullable<OAuthRuntimeOptions["refresh"]>>(async (_url, options) => {
-    expect(options.resource?.href).toBe("https://resource.example.com/mcp");
+    expect(options.resource && new URL(options.resource).href).toBe(
+      "https://resource.example.com/mcp",
+    );
     return refreshedTokens();
   });
   const runtime: OAuthRuntimeOptions = {
@@ -142,7 +144,7 @@ test("uses the discovered protected resource for binding and every refresh", asy
   });
   const seen: Array<string | undefined> = [];
   const refresh = vi.fn<NonNullable<OAuthRuntimeOptions["refresh"]>>(async (_url, options) => {
-    seen.push(options.resource?.href);
+    seen.push(options.resource && new URL(options.resource).href);
     return refreshedTokens();
   });
   const provider = createOAuthAuthProvider(
@@ -189,7 +191,7 @@ test("an explicitly configured resource wins over discovered metadata", async ()
     };
   });
   const refresh = vi.fn<NonNullable<OAuthRuntimeOptions["refresh"]>>(async (_url, options) => {
-    expect(options.resource?.href).toBe(binding().resource);
+    expect(options.resource && new URL(options.resource).href).toBe(binding().resource);
     return refreshedTokens();
   });
   const provider = createOAuthAuthProvider(fixture.id, binding(), {
@@ -287,7 +289,7 @@ test("refresh uses only the configured clean fetch and persists rotated stamped 
         client_secret: "client-secret-literal",
       });
       expect(options.refreshToken).toBe("refresh-1");
-      expect(options.resource?.href).toBe(binding().resource);
+      expect(options.resource && new URL(options.resource).href).toBe(binding().resource);
       expect(options).not.toHaveProperty("addClientAuthentication");
       await options.fetchFn?.("https://auth.example.com/token", { method: "POST" });
       return refreshedTokens({ refresh_token: "refresh-rotated" });

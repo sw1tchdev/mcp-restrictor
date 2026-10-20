@@ -18,9 +18,9 @@ import { delimiter, dirname, join, resolve } from "node:path";
 import { createInterface } from "node:readline/promises";
 import { PassThrough, Readable, Writable, type Duplex } from "node:stream";
 import { fileURLToPath } from "node:url";
-import { NodeStreamableHTTPServerTransport } from "@modelcontextprotocol/node";
 import { runStdioProxy, startHttpProxy } from "@mcp-restrictor/transports";
 import { expect, test, vi } from "vitest";
+import { handleStatelessRequest } from "./helpers.ts";
 import { main } from "../src/index.ts";
 import { resolveProxyRoute, runProxyCommand } from "../src/commands/proxy.ts";
 import { defineClientAdapter } from "../src/client-adapter.ts";
@@ -2876,15 +2876,6 @@ async function startRemoteFixture(
   if (kind === "websocket") return startWebSocketFixture(secrets);
   if (kind === "sse") return startSseFixture(secrets);
 
-  const transport = new NodeStreamableHTTPServerTransport({
-    sessionIdGenerator: undefined,
-    enableJsonResponse: true,
-  });
-  transport.onmessage = (message) => {
-    if (!("method" in message) || !("id" in message)) return;
-    void transport.send(responseFor(message as RpcRequest), { relatedRequestId: message.id });
-  };
-  await transport.start();
   const fixture = { accepted: 0 };
   const server = createServer((request, response) => {
     if (!validFixtureHeaders(request, secrets, true)) {
@@ -2892,7 +2883,10 @@ async function startRemoteFixture(
       return;
     }
     fixture.accepted += 1;
-    void transport.handleRequest(request, response);
+    void handleStatelessRequest(request, response, (message, transport) => {
+      if (!("method" in message) || !("id" in message)) return;
+      void transport.send(responseFor(message as RpcRequest), { relatedRequestId: message.id });
+    });
   });
   server.listen(0, "127.0.0.1");
   await once(server, "listening");
@@ -2902,10 +2896,7 @@ async function startRemoteFixture(
       return fixture.accepted;
     },
     url: serverUrl(server),
-    close: async () => {
-      await transport.close();
-      await closeHttpServer(server);
-    },
+    close: () => closeHttpServer(server),
   };
 }
 

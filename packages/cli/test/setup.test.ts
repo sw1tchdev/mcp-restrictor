@@ -20,8 +20,8 @@ import { PassThrough, Readable, Writable } from "node:stream";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { parse } from "smol-toml";
 import { afterEach, expect, test, vi } from "vitest";
-import { NodeStreamableHTTPServerTransport } from "@modelcontextprotocol/node";
 import type { UpstreamConfig } from "@mcp-restrictor/transports";
+import { handleStatelessRequest } from "./helpers.ts";
 import { defineClientAdapter, type ClientAdapter } from "../src/client-adapter.ts";
 import {
   MASTER_KEY_FILE_ENV,
@@ -6227,29 +6227,6 @@ async function startOpenCodeNegotiationFixture(httpStatus: 200 | 401 | 404 | 500
   sseMessages(): number;
   close(): Promise<void>;
 }> {
-  const transport = new NodeStreamableHTTPServerTransport({
-    sessionIdGenerator: undefined,
-    enableJsonResponse: true,
-  });
-  transport.onmessage = (message) => {
-    if (!("method" in message) || !("id" in message)) return;
-    const result =
-      message.method === "initialize"
-        ? {
-            protocolVersion: (message.params as { protocolVersion: string }).protocolVersion,
-            capabilities: { tools: {} },
-            serverInfo: { name: "opencode-negotiation", version: "1.0.0" },
-          }
-        : message.method === "tools/list"
-          ? { tools: [{ name: "read_file", inputSchema: { type: "object" } }] }
-          : {};
-    void transport.send(
-      { jsonrpc: "2.0", id: message.id, result },
-      { relatedRequestId: message.id },
-    );
-  };
-  await transport.start();
-
   let sseMessageRequests = 0;
   let stream: ServerResponse | undefined;
   const server = createServer(async (request, response) => {
@@ -6258,7 +6235,23 @@ async function startOpenCodeNegotiationFixture(httpStatus: 200 | 401 | 404 | 500
         httpStatus === 200 ||
         (httpStatus === 401 && request.headers.authorization === "Bearer oauth-token")
       ) {
-        await transport.handleRequest(request, response);
+        await handleStatelessRequest(request, response, (message, transport) => {
+          if (!("method" in message) || !("id" in message)) return;
+          const result =
+            message.method === "initialize"
+              ? {
+                  protocolVersion: (message.params as { protocolVersion: string }).protocolVersion,
+                  capabilities: { tools: {} },
+                  serverInfo: { name: "opencode-negotiation", version: "1.0.0" },
+                }
+              : message.method === "tools/list"
+                ? { tools: [{ name: "read_file", inputSchema: { type: "object" } }] }
+                : {};
+          void transport.send(
+            { jsonrpc: "2.0", id: message.id, result },
+            { relatedRequestId: message.id },
+          );
+        });
         return;
       }
       response
@@ -6304,7 +6297,6 @@ async function startOpenCodeNegotiationFixture(httpStatus: 200 | 401 | 404 | 500
     sseMessages: () => sseMessageRequests,
     close: async () => {
       stream?.end();
-      await transport.close();
       await new Promise<void>((resolveClose, reject) => {
         server.close((error) => (error ? reject(error) : resolveClose()));
       });

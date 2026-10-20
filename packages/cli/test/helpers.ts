@@ -14,7 +14,7 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 import { Client, type FetchLike, type Transport } from "@modelcontextprotocol/client";
 import { StdioClientTransport } from "@modelcontextprotocol/client/stdio";
 import { NodeStreamableHTTPServerTransport, toNodeHandler } from "@modelcontextprotocol/node";
-import { createMcpHandler, McpServer } from "@modelcontextprotocol/server";
+import { createMcpHandler, McpServer, type JSONRPCMessage } from "@modelcontextprotocol/server";
 import { expect } from "vitest";
 
 const testDirectory = dirname(fileURLToPath(import.meta.url));
@@ -205,25 +205,27 @@ export async function startDualEraHttpFixture(
   };
 }
 
+// The SDK rejects reuse of a stateless transport, so serve each request with a fresh one.
+export async function handleStatelessRequest(
+  request: IncomingMessage,
+  response: ServerResponse,
+  onmessage: (message: JSONRPCMessage, transport: NodeStreamableHTTPServerTransport) => void,
+): Promise<void> {
+  const transport = new NodeStreamableHTTPServerTransport({
+    sessionIdGenerator: undefined,
+    enableJsonResponse: true,
+  });
+  transport.onmessage = (message) => onmessage(message, transport);
+  await transport.start();
+  response.once("close", () => void transport.close());
+  await transport.handleRequest(request, response);
+}
+
 export async function startHttpFixture(options: HttpFixtureOptions = {}): Promise<{
   url: string;
   close(): Promise<void>;
 }> {
   const instanceId = options.instanceId ?? randomUUID();
-  const transport = new NodeStreamableHTTPServerTransport({
-    sessionIdGenerator: undefined,
-    enableJsonResponse: true,
-  });
-  transport.onmessage = (message) => {
-    if (!("method" in message) || !("id" in message)) return;
-    const result = fixtureResult(message.method, message, instanceId);
-    void transport.send(
-      { jsonrpc: "2.0", id: message.id, result },
-      { relatedRequestId: message.id },
-    );
-  };
-  await transport.start();
-
   const handle = (request: IncomingMessage, response: ServerResponse) => {
     if (
       options.expectedAuthorization !== undefined &&
@@ -232,7 +234,14 @@ export async function startHttpFixture(options: HttpFixtureOptions = {}): Promis
       response.writeHead(401).end("Unauthorized");
       return;
     }
-    void transport.handleRequest(request, response);
+    void handleStatelessRequest(request, response, (message, transport) => {
+      if (!("method" in message) || !("id" in message)) return;
+      const result = fixtureResult(message.method, message, instanceId);
+      void transport.send(
+        { jsonrpc: "2.0", id: message.id, result },
+        { relatedRequestId: message.id },
+      );
+    });
   };
   const server = options.tls ? createHttpsServer(options.tls, handle) : createHttpServer(handle);
   server.listen(0, "127.0.0.1");
@@ -242,10 +251,7 @@ export async function startHttpFixture(options: HttpFixtureOptions = {}): Promis
 
   return {
     url: `${options.tls ? "https" : "http"}://127.0.0.1:${address.port}/mcp`,
-    close: async () => {
-      await transport.close();
-      await closeServer(server);
-    },
+    close: () => closeServer(server),
   };
 }
 

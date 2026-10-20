@@ -5,11 +5,11 @@ import { dirname, resolve } from "node:path";
 import { Writable } from "node:stream";
 import { fileURLToPath } from "node:url";
 import { Client } from "@modelcontextprotocol/client";
-import { NodeStreamableHTTPServerTransport } from "@modelcontextprotocol/node";
 import type { Transport } from "@modelcontextprotocol/server";
 import { afterEach, describe, expect, test, vi } from "vitest";
 import { WebSocketServer } from "ws";
 import { discoverToolNames } from "../src/discovery.js";
+import { handleStatelessRequest } from "./stateless-fixture.js";
 import * as upstreamModule from "../src/upstream.js";
 import type { UpstreamHeader } from "../src/remote.js";
 import type { UpstreamConfig } from "../src/upstream.js";
@@ -408,33 +408,7 @@ async function startHttpFixture(
   clientVersions: string[];
   close(): Promise<void>;
 }> {
-  const transport = new NodeStreamableHTTPServerTransport({
-    sessionIdGenerator: undefined,
-    enableJsonResponse: true,
-  });
   const clientVersions: string[] = [];
-  transport.onmessage = (message) => {
-    if (!("method" in message) || !("id" in message)) return;
-    if (message.method === "initialize")
-      clientVersions.push(
-        (message.params as { clientInfo: { version: string } }).clientInfo.version,
-      );
-    const result =
-      message.method === "initialize"
-        ? {
-            protocolVersion: (message.params as { protocolVersion: string }).protocolVersion,
-            capabilities: { tools: {} },
-            serverInfo: { name: "discovery-fixture", version: "1.0.0" },
-          }
-        : message.method === "tools/list"
-          ? { tools: [{ name: "read_file", inputSchema: { type: "object" } }] }
-          : {};
-    void transport.send(
-      { jsonrpc: "2.0", id: message.id, result },
-      { relatedRequestId: message.id },
-    );
-  };
-  await transport.start();
 
   const receivedHeaders: string[] = [];
   const server = createServer((request, response) => {
@@ -447,7 +421,27 @@ async function startHttpFixture(
       response.writeHead(401).end("Unauthorized");
       return;
     }
-    void transport.handleRequest(request, response);
+    void handleStatelessRequest(request, response, (message, transport) => {
+      if (!("method" in message) || !("id" in message)) return;
+      if (message.method === "initialize")
+        clientVersions.push(
+          (message.params as { clientInfo: { version: string } }).clientInfo.version,
+        );
+      const result =
+        message.method === "initialize"
+          ? {
+              protocolVersion: (message.params as { protocolVersion: string }).protocolVersion,
+              capabilities: { tools: {} },
+              serverInfo: { name: "discovery-fixture", version: "1.0.0" },
+            }
+          : message.method === "tools/list"
+            ? { tools: [{ name: "read_file", inputSchema: { type: "object" } }] }
+            : {};
+      void transport.send(
+        { jsonrpc: "2.0", id: message.id, result },
+        { relatedRequestId: message.id },
+      );
+    });
   });
   server.listen(0, "127.0.0.1");
   await once(server, "listening");
@@ -459,7 +453,6 @@ async function startHttpFixture(
     receivedHeaders,
     clientVersions,
     close: async () => {
-      await transport.close();
       await closeServer(server);
     },
   };

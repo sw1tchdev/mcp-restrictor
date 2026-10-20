@@ -1,9 +1,9 @@
 import { createHash, randomBytes } from "node:crypto";
 import { once } from "node:events";
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
-import { NodeStreamableHTTPServerTransport } from "@modelcontextprotocol/node";
 import { WebSocketServer } from "ws";
 import type { RemoteKind } from "../src/remote.js";
+import { handleStatelessRequest } from "./stateless-fixture.js";
 
 type OAuthExpectation = {
   expectedScope: string;
@@ -51,16 +51,6 @@ export async function startRemoteAuthFixture(options: {
   ]);
   let registeredRedirectUri: string | undefined;
   let authorization: { code: string; challenge: string; redirectUri: string } | undefined;
-  const transport = new NodeStreamableHTTPServerTransport({
-    sessionIdGenerator: undefined,
-    enableJsonResponse: true,
-  });
-  transport.onmessage = (message) => {
-    if (!("id" in message) || !("method" in message)) return;
-    const request = message as RpcRequest;
-    void transport.send(rpcResponse(request), { relatedRequestId: request.id });
-  };
-  await transport.start();
 
   const server = createServer((request, response) => {
     void handle(request, response).catch(() => response.writeHead(500).end());
@@ -97,7 +87,11 @@ export async function startRemoteAuthFixture(options: {
         return;
       }
       if (options.transport === "http") {
-        await transport.handleRequest(request, response);
+        await handleStatelessRequest(request, response, (message, transport) => {
+          if (!("id" in message) || !("method" in message)) return;
+          const rpcRequest = message as RpcRequest;
+          void transport.send(rpcResponse(rpcRequest), { relatedRequestId: rpcRequest.id });
+        });
         return;
       }
       if (request.method === "GET" && target.pathname === "/events") {
@@ -256,7 +250,6 @@ export async function startRemoteAuthFixture(options: {
     close: async () => {
       for (const stream of sseStreams.values()) stream.end();
       sseStreams.clear();
-      await transport.close();
       server.closeAllConnections();
       await new Promise<void>((resolve, reject) =>
         server.close((error) => (error ? reject(error) : resolve())),
